@@ -1,0 +1,16 @@
+{
+  "name": "say-it",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm run --parallel dev",
+    "build": "pnpm run -r build",
+    "lint": "pnpm run -r lint",
+    "typecheck": "pnpm run -r typecheck",
+    "db:migrate": "pnpm --filter @say-it/backend db:migrate",
+    "db:seed": "pnpm --filter @say-it/backend db:seed",
+    "db:generate": "pnpm --filter @say-it/backend db:generate"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
