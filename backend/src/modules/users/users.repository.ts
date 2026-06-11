@@ -50,4 +50,19 @@ export const usersRepository = {
       ...skills.map((skill) => prisma.userSkill.create({ data: { userId, skill } })),
     ]);
   },
+
+  touchLastActive(userId: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { lastActiveAt: new Date() },
+      select: { id: true, lastActiveAt: true },
+    });
+  },
+
+  getLastActiveMap(userIds: string[]) {
+    return prisma.user.findMany({
+      where: { id: { in: userIds } },
+      select: { id: true, lastActiveAt: true },
+    });
+  },
 };

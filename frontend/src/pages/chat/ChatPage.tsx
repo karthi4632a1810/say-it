@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Paper, Typography, Stack, Avatar, Chip } from '@mui/material';
+import { Box, Paper, Typography, Stack, Chip } from '@mui/material';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import { apiClient } from '../../services/api/client';
 import { getSocket } from '../../services/socket/socket.client';
@@ -12,11 +12,15 @@ import { MessageItem } from '../../components/chat/MessageItem';
 import { MessageInput } from '../../components/chat/MessageInput';
 import { MessageInfoDialog } from '../../components/chat/MessageInfoDialog';
 import { ForwardDialog } from '../../components/chat/ForwardDialog';
+import { PresenceAvatar } from '../../components/presence/PresenceAvatar';
+import { PresenceLabel } from '../../components/presence/PresenceLabel';
+import { usePresenceHydration } from '../../hooks/usePresenceHydration';
 
 export function ChatPage() {
   const { id } = useParams<{ id: string }>();
   const user = useSelector((s: RootState) => s.auth.user);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [pinned, setPinned] = useState<ChatMessage[]>([]);
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -28,11 +32,30 @@ export function ChatPage() {
   const [forwardId, setForwardId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const memberMap = useRef<Record<string, ChatUser>>({});
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+  const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const jumpToMessage = useCallback((messageId: string) => {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setHighlightId(messageId);
+    if (highlightTimerRef.current) clearTimeout(highlightTimerRef.current);
+    highlightTimerRef.current = setTimeout(() => setHighlightId(null), 2200);
+  }, []);
 
   const loadMessages = useCallback(() => {
     if (!id) return;
-    apiClient.get(`/conversations/${id}/messages`).then((r) => setMessages(r.data.data));
-    apiClient.get(`/conversations/${id}/pinned`).then((r) => setPinned(r.data.data));
+    apiClient.get(`/conversations/${id}/messages`)
+      .then((r) => {
+        setMessages(r.data.data ?? []);
+        setLoadError(null);
+      })
+      .catch((err) => {
+        const msg = err.response?.data?.error?.message ?? 'Failed to load messages';
+        setLoadError(msg);
+        setMessages([]);
+      });
+    apiClient.get(`/conversations/${id}/pinned`).then((r) => setPinned(r.data.data ?? [])).catch(() => setPinned([]));
   }, [id]);
 
   const loadConversation = useCallback(() => {
@@ -52,6 +75,8 @@ export function ChatPage() {
 
   useEffect(() => {
     if (!id || !user) return;
+    setMessages([]);
+    setLoadError(null);
     loadMessages();
     loadConversation();
     const socket = getSocket();
@@ -110,19 +135,45 @@ export function ChatPage() {
     setInfoOpen(true);
   };
 
+  const otherUser = conversation?.type === 'DIRECT'
+    ? conversation.members?.find((m) => m.user.id !== user?.id)?.user
+    : null;
+  usePresenceHydration(otherUser ? [otherUser.id] : []);
+
   if (!id) return null;
 
   const title = conversation ? getConversationTitle(conversation, user?.id ?? '') : 'Chat';
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', mx: -1 }}>
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1, px: 1 }}>
-        <Avatar sx={{ width: 36, height: 36 }}>{title[0]}</Avatar>
-        <Typography variant="h6" fontWeight={700}>{title}</Typography>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0, width: '100%', height: '100%' }}>
+      <Stack
+        direction="row"
+        alignItems="center"
+        spacing={1}
+        sx={{
+          px: 2,
+          py: 1.25,
+          flexShrink: 0,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          bgcolor: 'background.paper',
+        }}
+      >
+        <PresenceAvatar
+          userId={otherUser?.id}
+          sx={{ width: 36, height: 36 }}
+          src={otherUser?.avatarUrl ?? undefined}
+        >
+          {title[0]}
+        </PresenceAvatar>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="h6" fontWeight={700} noWrap>{title}</Typography>
+          {otherUser && <PresenceLabel userId={otherUser.id} display="block" />}
+        </Box>
       </Stack>
 
       {pinned.length > 0 && (
-        <Paper sx={{ p: 1, mb: 1, bgcolor: 'warning.50' }}>
+        <Paper sx={{ p: 1, mb: 1, mx: 2, bgcolor: 'warning.50', flexShrink: 0 }}>
           <Stack direction="row" alignItems="center" spacing={0.5}>
             <PushPinIcon fontSize="small" color="action" />
             <Typography variant="caption" fontWeight={600}>Pinned</Typography>
@@ -135,18 +186,30 @@ export function ChatPage() {
         </Paper>
       )}
 
-      <Paper sx={{ flex: 1, overflow: 'auto', p: 2, mb: 1, bgcolor: 'background.default' }}>
+      <Paper sx={{ flex: 1, overflow: 'auto', px: 2, pt: 2, pb: 2, bgcolor: 'background.default', borderRadius: 0, minHeight: 0, boxShadow: 'none' }}>
+        {loadError && (
+          <Typography variant="body2" color="error" sx={{ textAlign: 'center', mt: 2 }}>
+            {loadError}
+          </Typography>
+        )}
+        {!loadError && messages.length === 0 && (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
+            No messages yet. Say hello or attach a file below.
+          </Typography>
+        )}
         {messages.map((m) => (
           <MessageItem
             key={m.id}
             message={m}
             currentUserId={user?.id ?? ''}
             isOwn={m.sender.id === user?.id}
+            highlighted={highlightId === m.id}
             onReply={setReplyTo}
             onEdit={(msg) => { setEditing(msg); setEditContent(msg.content ?? ''); setReplyTo(null); }}
             onForward={setForwardId}
             onInfo={showInfo}
             onUpdated={loadMessages}
+            onJumpToMessage={jumpToMessage}
           />
         ))}
         {typingUsers.length > 0 && (
@@ -155,12 +218,13 @@ export function ChatPage() {
         <div ref={bottomRef} />
       </Paper>
 
-      <Box sx={{ px: 1 }}>
+      <Box sx={{ width: '100%', flexShrink: 0, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
         <MessageInput
           conversationId={id}
           members={members}
           replyTo={replyTo}
           onClearReply={() => setReplyTo(null)}
+          onJumpToReply={jumpToMessage}
           onSent={loadMessages}
           editingId={editing?.id ?? null}
           editContent={editContent}

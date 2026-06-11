@@ -12,7 +12,7 @@ export function useSocket(enabled: boolean): Socket {
     connectSocket();
     const socket = getSocket();
 
-    socket.on('presence:update', (data: { userId: string; status: string }) => {
+    socket.on('presence:update', (data: { userId: string; status: string; lastActiveAt?: string | null }) => {
       dispatch(updatePresence(data));
     });
 

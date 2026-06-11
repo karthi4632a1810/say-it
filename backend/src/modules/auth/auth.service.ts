@@ -1,4 +1,5 @@
 import { authRepository } from './auth.repository.js';
+import { usersRepository } from '../users/users.repository.js';
 import { mfaService } from './mfa.service.js';
 import { comparePassword, hashPassword, hashToken, generateToken } from '../../lib/crypto.js';
 import { signAccessToken, signTempToken } from '../../config/jwt.js';
@@ -105,6 +106,7 @@ export const authService = {
       throw new Error('INVALID_CREDENTIALS');
     }
     await authRepository.resetLoginAttempts(user.id);
+    await usersRepository.touchLastActive(user.id);
 
     const { roles, permissions } = extractPermissions(user);
 

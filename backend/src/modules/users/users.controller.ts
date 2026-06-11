@@ -47,6 +47,12 @@ export const usersController = {
     sendSuccess(res, result);
   },
 
+  async bulkPresence(req: Request, res: Response) {
+    const userIds = Array.isArray(req.body?.userIds) ? (req.body.userIds as string[]) : [];
+    const result = await usersService.getBulkPresence(userIds.slice(0, 100));
+    sendSuccess(res, result);
+  },
+
   async departments(_req: Request, res: Response) {
     const depts = await usersService.listDepartments();
     sendSuccess(res, depts);

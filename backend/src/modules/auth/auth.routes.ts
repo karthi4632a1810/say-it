@@ -13,7 +13,7 @@ authRoutes.post('/register', rateLimiter('register', 3, 60), validate({ body: re
 authRoutes.get('/check-username', validate({ query: checkUsernameSchema }), authController.checkUsername);
 authRoutes.post('/mfa/verify', validate({ body: mfaVerifySchema }), authController.verifyMfa);
 authRoutes.post('/refresh', authController.refresh);
-authRoutes.post('/logout', authenticate, authController.logout);
+authRoutes.post('/logout', authController.logout);
 authRoutes.get('/sessions', authenticate, authController.sessions);
 authRoutes.delete('/sessions/:id', authenticate, authController.revokeSession);
 authRoutes.post('/mfa/setup', authenticate, authController.mfaSetup);

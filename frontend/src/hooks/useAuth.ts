@@ -1,6 +1,7 @@
 import { useDispatch, useSelector } from 'react-redux';
 import { useCallback } from 'react';
 import { apiClient, setAccessToken } from '../services/api/client';
+import { disconnectSocket } from '../services/socket/socket.client';
 import { setUser, logout as logoutAction } from '../store/slices/authSlice';
 import type { RootState } from '../store';
 
@@ -29,9 +30,15 @@ export function useAuth() {
   }, [dispatch]);
 
   const logout = useCallback(async () => {
-    await apiClient.post('/auth/logout');
-    setAccessToken(null);
-    dispatch(logoutAction());
+    try {
+      await apiClient.post('/auth/logout', {}, { skipAuthRefresh: true });
+    } catch {
+      // Always clear client session even if the server call fails
+    } finally {
+      disconnectSocket();
+      setAccessToken(null);
+      dispatch(logoutAction());
+    }
   }, [dispatch]);
 
   const fetchMe = useCallback(async () => {

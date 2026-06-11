@@ -13,23 +13,28 @@ import EditIcon from '@mui/icons-material/Edit';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
 import type { ChatMessage, ReplyTarget } from '../../types/chat';
-import { formatMessageTime, getReadTick, isStarredByMe } from '../../utils/chat';
-import { MessageContent, AttachmentLink } from './MessageContent';
+import { formatMessageTime, getMessagePreviewText, getReadTick, isStarredByMe } from '../../utils/chat';
+import { MessageContent, AttachmentPreview } from './MessageContent';
 import { ReadTicks } from './ReadTicks';
+import { ReplyQuote } from './ReplyQuote';
 import { apiClient } from '../../services/api/client';
 
 type Props = {
   message: ChatMessage;
   currentUserId: string;
   isOwn: boolean;
+  highlighted?: boolean;
   onReply: (target: ReplyTarget) => void;
   onEdit: (message: ChatMessage) => void;
   onForward: (messageId: string) => void;
   onInfo: (messageId: string) => void;
   onUpdated: () => void;
+  onJumpToMessage?: (messageId: string) => void;
 };
 
-export function MessageItem({ message, currentUserId, isOwn, onReply, onEdit, onForward, onInfo, onUpdated }: Props) {
+export function MessageItem({
+  message, currentUserId, isOwn, highlighted, onReply, onEdit, onForward, onInfo, onUpdated, onJumpToMessage,
+}: Props) {
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
   const starred = isStarredByMe(message);
   const tick = isOwn ? getReadTick(message, currentUserId) : null;
@@ -41,22 +46,31 @@ export function MessageItem({ message, currentUserId, isOwn, onReply, onEdit, on
   };
 
   return (
-    <Box sx={{ mb: 1.5, display: 'flex', gap: 1, flexDirection: isOwn ? 'row-reverse' : 'row', alignItems: 'flex-end' }}>
+    <Box
+      id={`msg-${message.id}`}
+      sx={{
+        mb: 1.5,
+        display: 'flex',
+        gap: 1,
+        flexDirection: isOwn ? 'row-reverse' : 'row',
+        alignItems: 'flex-end',
+        borderRadius: 2.5,
+        px: 0.5,
+        py: 0.25,
+        mx: -0.5,
+        transition: 'background-color 0.35s ease, box-shadow 0.35s ease',
+        ...(highlighted ? {
+          bgcolor: 'rgba(79, 70, 229, 0.14)',
+          boxShadow: 'inset 0 0 0 2px rgba(79, 70, 229, 0.45)',
+        } : {}),
+      }}
+    >
       {!isOwn && <Avatar sx={{ width: 32, height: 32 }}>{message.sender.displayName[0]}</Avatar>}
-      <Box sx={{ maxWidth: '75%', position: 'relative' }}>
+      <Box sx={{ maxWidth: '75%', minWidth: 0, position: 'relative' }}>
         {!isOwn && (
           <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
             {message.sender.displayName}
           </Typography>
-        )}
-
-        {message.parent && (
-          <Paper sx={{ p: 1, mb: 0.5, bgcolor: 'grey.100', borderLeft: 3, borderColor: 'primary.main' }}>
-            <Typography variant="caption" fontWeight={600}>{message.parent.sender.displayName}</Typography>
-            <Typography variant="caption" display="block" color="text.secondary" noWrap>
-              {message.parent.content ?? 'Attachment'}
-            </Typography>
-          </Paper>
         )}
 
         <Paper
@@ -65,8 +79,20 @@ export function MessageItem({ message, currentUserId, isOwn, onReply, onEdit, on
             bgcolor: isOwn ? 'primary.main' : 'grey.100',
             color: isOwn ? 'white' : 'inherit',
             position: 'relative',
+            overflow: 'hidden',
+            maxWidth: '100%',
+            minWidth: 0,
+            width: 'fit-content',
           }}
         >
+          {message.parent && (
+            <ReplyQuote
+              senderName={message.parent.sender.displayName}
+              preview={getMessagePreviewText(message.parent)}
+              isOwnBubble={isOwn}
+              onClick={onJumpToMessage ? () => onJumpToMessage(message.parent!.id) : undefined}
+            />
+          )}
           {message.isPinned && (
             <PushPinIcon sx={{ fontSize: 14, position: 'absolute', top: 4, right: 4, opacity: 0.7 }} />
           )}
@@ -76,7 +102,7 @@ export function MessageItem({ message, currentUserId, isOwn, onReply, onEdit, on
             <>
               {message.content && <MessageContent content={message.content} />}
               {message.attachments?.map((a) => (
-                <AttachmentLink key={a.id} fileId={a.file.id} name={a.file.originalName} />
+                <AttachmentPreview key={a.id} fileId={a.file.id} name={a.file.originalName} mimeType={a.file.mimeType} isOwn={isOwn} />
               ))}
             </>
           )}
@@ -102,13 +128,20 @@ export function MessageItem({ message, currentUserId, isOwn, onReply, onEdit, on
         )}
 
         {!message.isDeleted && (
-          <IconButton size="small" sx={{ position: 'absolute', top: -8, [isOwn ? 'left' : 'right']: -28 }} onClick={(e) => setAnchor(e.currentTarget)}>
+          <IconButton size="small" sx={{ position: 'absolute', top: 4, [isOwn ? 'left' : 'right']: -28 }} onClick={(e) => setAnchor(e.currentTarget)}>
             <MoreVertIcon fontSize="small" />
           </IconButton>
         )}
 
         <Menu anchorEl={anchor} open={Boolean(anchor)} onClose={() => setAnchor(null)}>
-          <MenuItem onClick={() => { setAnchor(null); onReply({ id: message.id, content: message.content, senderName: message.sender.displayName }); }}>
+          <MenuItem onClick={() => {
+            setAnchor(null);
+            onReply({
+              id: message.id,
+              content: getMessagePreviewText(message),
+              senderName: message.sender.displayName,
+            });
+          }}>
             <ListItemIcon><ReplyIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Reply</ListItemText>
           </MenuItem>

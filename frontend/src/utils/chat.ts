@@ -1,4 +1,25 @@
 import type { ChatMessage, Conversation } from '../types/chat';
+import { getPreviewKind } from './fileTypes';
+
+export function getMessagePreviewText(message: {
+  content: string | null;
+  attachments?: Array<{ file: { originalName: string; mimeType: string } }>;
+}): string {
+  if (message.content?.trim()) {
+    const text = message.content.trim();
+    if (isGifUrl(text)) return 'GIF';
+    if (/^https?:\/\//i.test(text) && text.length > 60) return 'Link';
+    return text;
+  }
+  const att = message.attachments?.[0];
+  if (!att) return 'Attachment';
+  const kind = getPreviewKind(att.file.mimeType, att.file.originalName);
+  if (kind === 'video') return 'Video';
+  if (kind === 'image') return 'Photo';
+  if (kind === 'audio') return 'Voice message';
+  if (kind === 'pdf') return att.file.originalName;
+  return att.file.originalName;
+}
 
 export function getConversationTitle(conv: Conversation, currentUserId: string): string {
   if (conv.name) return conv.name;
@@ -31,9 +52,11 @@ export function getReadTick(message: ChatMessage, currentUserId: string): ReadTi
 }
 
 const GIF_PATTERN = /^https?:\/\/.+\.(gif|webp)(\?.*)?$/i;
+const GIPHY_PATTERN = /^https?:\/\/(?:media\d?\.|i\.)?giphy\.com\//i;
 
 export function isGifUrl(text: string): boolean {
-  return GIF_PATTERN.test(text.trim());
+  const t = text.trim();
+  return GIF_PATTERN.test(t) || GIPHY_PATTERN.test(t);
 }
 
 export function isStarredByMe(message: ChatMessage): boolean {

@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box, TextField, Grid, Card, CardContent, Typography, Avatar, Chip, Stack, Button,
+  Box, TextField, Grid, Card, CardContent, Typography, Chip, Stack, Button,
 } from '@mui/material';
 import ChatIcon from '@mui/icons-material/Chat';
 import { apiClient } from '../../services/api/client';
+import { PresenceAvatar } from '../../components/presence/PresenceAvatar';
+import { PresenceLabel } from '../../components/presence/PresenceLabel';
+import { usePresenceHydration } from '../../hooks/usePresenceHydration';
 
 type User = {
   id: string;
@@ -25,6 +28,9 @@ export function DirectoryPage() {
   const search = (q: string) => {
     apiClient.get('/users/directory', { params: { q } }).then((r) => setUsers(r.data.data));
   };
+
+  const userIds = useMemo(() => users.map((u) => u.id), [users]);
+  usePresenceHydration(userIds);
 
   const messageUser = async (userId: string) => {
     setStarting(userId);
@@ -47,9 +53,10 @@ export function DirectoryPage() {
             <Card>
               <CardContent>
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Avatar>{u.displayName[0]}</Avatar>
-                  <Box sx={{ flex: 1 }}>
+                  <PresenceAvatar userId={u.id}>{u.displayName[0]}</PresenceAvatar>
+                  <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography fontWeight={600}>{u.displayName}</Typography>
+                    <PresenceLabel userId={u.id} display="block" sx={{ mb: 0.25 }} />
                     {u.username && <Typography variant="caption" color="text.secondary">@{u.username}</Typography>}
                     <Typography variant="body2" color="text.secondary">{u.jobTitle}</Typography>
                     <Typography variant="caption">{u.department?.name}</Typography>

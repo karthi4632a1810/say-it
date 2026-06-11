@@ -31,6 +31,10 @@ const envSchema = z.object({
   EMBEDDING_PROVIDER: z.enum(['ollama', 'openai']).default('ollama'),
   OLLAMA_EMBED_MODEL: z.string().default('nomic-embed-text'),
   EMBEDDING_DIMENSIONS: z.coerce.number().default(768),
+  /** Max chat attachment size in bytes (default 20 GiB). */
+  MAX_UPLOAD_BYTES: z.coerce.number().default(20 * 1024 * 1024 * 1024),
+  /** HTTP request timeout for large uploads (default 24h). 0 = no timeout. */
+  UPLOAD_REQUEST_TIMEOUT_MS: z.coerce.number().default(24 * 60 * 60 * 1000),
 });
 
 const parsed = envSchema.parse(process.env);

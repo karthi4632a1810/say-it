@@ -10,6 +10,11 @@ const logger = pino({ name: 'server' });
 async function main() {
   const app = await createApp();
   const httpServer = createServer(app);
+  if (env.UPLOAD_REQUEST_TIMEOUT_MS > 0) {
+    httpServer.requestTimeout = env.UPLOAD_REQUEST_TIMEOUT_MS;
+  } else {
+    httpServer.requestTimeout = 0;
+  }
   createSocketServer(httpServer);
   startEmbeddingWorker();
 

@@ -38,7 +38,12 @@ export type ChatMessage = {
   attachments?: MessageAttachment[];
   statuses?: MessageStatus[];
   stars?: Array<{ userId: string }>;
-  parent?: { id: string; content: string | null; sender: { displayName: string } } | null;
+  parent?: {
+    id: string;
+    content: string | null;
+    sender: { displayName: string };
+    attachments?: MessageAttachment[];
+  } | null;
 };
 
 export type ConversationMember = {

@@ -12,7 +12,17 @@ function setRefreshCookie(res: Response, token: string): void {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
     sameSite: 'strict',
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
+}
+
+function clearRefreshCookie(res: Response): void {
+  res.clearCookie(REFRESH_COOKIE, {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    path: '/',
   });
 }
 
@@ -91,8 +101,14 @@ export const authController = {
 
   async logout(req: Request, res: Response) {
     const token = req.cookies[REFRESH_COOKIE] as string | undefined;
-    if (token) await authService.logout(token);
-    res.clearCookie(REFRESH_COOKIE);
+    if (token) {
+      try {
+        await authService.logout(token);
+      } catch {
+        // Best-effort session revoke
+      }
+    }
+    clearRefreshCookie(res);
     sendSuccess(res, { loggedOut: true });
   },
 

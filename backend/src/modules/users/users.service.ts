@@ -41,7 +41,27 @@ export const usersService = {
   },
 
   async getPresence(userId: string) {
-    return { userId, status: await getPresence(userId) };
+    const status = await getPresence(userId);
+    const user = await usersRepository.findById(userId);
+    return {
+      userId,
+      status,
+      lastActiveAt: user?.lastActiveAt?.toISOString() ?? null,
+    };
+  },
+
+  async getBulkPresence(userIds: string[]) {
+    const unique = [...new Set(userIds.filter(Boolean))];
+    if (unique.length === 0) return [];
+    const rows = await usersRepository.getLastActiveMap(unique);
+    const lastActiveMap = new Map(rows.map((r) => [r.id, r.lastActiveAt?.toISOString() ?? null]));
+    return Promise.all(
+      unique.map(async (id) => ({
+        userId: id,
+        status: await getPresence(id),
+        lastActiveAt: lastActiveMap.get(id) ?? null,
+      })),
+    );
   },
 
   listDepartments() {

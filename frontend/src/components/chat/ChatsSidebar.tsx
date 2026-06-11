@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  Box, List, ListItemButton, ListItemAvatar, ListItemText, Avatar,
-  Typography, IconButton, TextField, InputAdornment, Divider, Chip, Stack,
+  Box, List, ListItemButton, ListItemAvatar, ListItemText,
+  Typography, IconButton, TextField, InputAdornment, Chip, Stack,
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import SearchIcon from '@mui/icons-material/Search';
@@ -13,6 +13,9 @@ import { apiClient } from '../../services/api/client';
 import { getConversationTitle } from '../../utils/chat';
 import type { Conversation } from '../../types/chat';
 import { NewChatDialog } from './NewChatDialog';
+import { PresenceAvatar } from '../presence/PresenceAvatar';
+import { usePresenceHydration } from '../../hooks/usePresenceHydration';
+import { formatPresenceLabel } from '../../utils/presence';
 
 export function ChatsSidebar() {
   const navigate = useNavigate();
@@ -42,6 +45,16 @@ export function ChatsSidebar() {
     const rest = list.filter((c) => c.type !== 'DIRECT');
     return [...dms, ...rest];
   }, [conversations, filter, userId]);
+
+  const dmUserIds = useMemo(
+    () => filtered
+      .filter((c) => c.type === 'DIRECT')
+      .map((c) => c.members?.find((m) => m.user.id !== userId)?.user.id)
+      .filter((id): id is string => Boolean(id)),
+    [filtered, userId],
+  );
+  usePresenceHydration(dmUserIds);
+  const presenceMap = useSelector((s: RootState) => s.presence);
 
   return (
     <Box>
@@ -82,6 +95,10 @@ export function ChatsSidebar() {
             const title = getConversationTitle(c, userId ?? '');
             const preview = c.messages?.[0]?.content;
             const other = c.type === 'DIRECT' ? c.members?.find((m) => m.user.id !== userId)?.user : null;
+            const presence = other ? presenceMap[other.id] : undefined;
+            const statusLine = other && !preview
+              ? formatPresenceLabel(presence?.status, presence?.lastActiveAt)
+              : '';
             return (
               <ListItemButton
                 key={c.id}
@@ -90,15 +107,23 @@ export function ChatsSidebar() {
                 sx={{ borderRadius: 1, mx: 0.5 }}
               >
                 <ListItemAvatar sx={{ minWidth: 40 }}>
-                  <Avatar sx={{ width: 32, height: 32 }} src={other?.avatarUrl ?? undefined}>
+                  <PresenceAvatar
+                    userId={other?.id}
+                    sx={{ width: 32, height: 32 }}
+                    src={other?.avatarUrl ?? undefined}
+                  >
                     {title[0]}
-                  </Avatar>
+                  </PresenceAvatar>
                 </ListItemAvatar>
                 <ListItemText
                   primary={title}
-                  secondary={preview ? preview.slice(0, 40) : c.type === 'DIRECT' ? 'Start chatting' : ''}
+                  secondary={preview ? preview.slice(0, 40) : statusLine || (c.type === 'DIRECT' ? 'Start chatting' : '')}
                   primaryTypographyProps={{ noWrap: true, fontSize: 14, fontWeight: activeId === c.id ? 700 : 500 }}
-                  secondaryTypographyProps={{ noWrap: true, fontSize: 12 }}
+                  secondaryTypographyProps={{
+                    noWrap: true,
+                    fontSize: 12,
+                    color: !preview && presence?.status === 'online' ? 'success.main' : 'text.secondary',
+                  }}
                 />
               </ListItemButton>
             );

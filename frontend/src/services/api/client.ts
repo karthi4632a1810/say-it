@@ -9,6 +9,13 @@ export const apiClient = axios.create({
 
 let accessToken: string | null = localStorage.getItem('accessToken');
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /** Skip automatic refresh retry (e.g. during logout). */
+    skipAuthRefresh?: boolean;
+  }
+}
+
 export function setAccessToken(token: string | null) {
   accessToken = token;
   if (token) localStorage.setItem('accessToken', token);
@@ -33,7 +40,7 @@ apiClient.interceptors.response.use(
   (res) => res,
   async (error) => {
     const original = error.config;
-    if (error.response?.status === 401 && !original._retry) {
+    if (error.response?.status === 401 && !original._retry && !original.skipAuthRefresh) {
       if (refreshing) {
         return new Promise((resolve) => {
           queue.push((token) => {

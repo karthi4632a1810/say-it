@@ -1,4 +1,5 @@
 import { messagesRepository } from './messages.repository.js';
+import { serializeMessage, serializeMessages } from './messages.serializer.js';
 import { conversationsService } from '../conversations/conversations.service.js';
 import { notificationsService } from '../notifications/notifications.service.js';
 import { embeddingQueue } from '../../workers/queue.js';
@@ -11,7 +12,7 @@ export const messagesService = {
       userId,
       before ? new Date(before) : undefined,
     );
-    return messages.reverse();
+    return serializeMessages(messages.reverse());
   },
 
   async send(
@@ -57,13 +58,13 @@ export const messagesService = {
       });
     }
 
-    return message;
+    return serializeMessage(message);
   },
 
   async edit(messageId: string, userId: string, content: string) {
     const msg = await messagesRepository.findById(messageId);
     if (!msg || msg.senderId !== userId) throw new Error('FORBIDDEN');
-    return messagesRepository.edit(messageId, content, userId);
+    return serializeMessage(await messagesRepository.edit(messageId, content, userId));
   },
 
   async delete(messageId: string, userId: string) {
@@ -129,13 +130,15 @@ export const messagesService = {
     await conversationsService.assertMember(msg.conversationId, userId);
     await conversationsService.assertMember(targetConversationId, userId);
     const prefix = msg.content ? `↪ Forwarded:\n${msg.content}` : '↪ Forwarded attachment';
-    return messagesRepository.create({
-      conversationId: targetConversationId,
-      senderId: userId,
-      content: prefix,
-      forwardedFrom: messageId,
-      fileIds: msg.attachments?.map((a) => a.fileId),
-    });
+    return serializeMessage(
+      await messagesRepository.create({
+        conversationId: targetConversationId,
+        senderId: userId,
+        content: prefix,
+        forwardedFrom: messageId,
+        fileIds: msg.attachments?.map((a) => a.fileId),
+      }),
+    );
   },
 
   async listPinned(conversationId: string, userId: string) {

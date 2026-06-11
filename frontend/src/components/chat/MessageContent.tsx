@@ -1,19 +1,21 @@
-import { Box, Link } from '@mui/material';
+import { Box } from '@mui/material';
 import { isGifUrl } from '../../utils/chat';
 
 export function MessageContent({ content }: { content: string }) {
+  if (!content.trim()) return null;
+
   if (isGifUrl(content)) {
     return <Box component="img" src={content.trim()} alt="gif" sx={{ maxWidth: 280, borderRadius: 1, display: 'block' }} />;
   }
 
   const parts: Array<{ type: 'text' | 'mention' | 'gif'; value: string }> = [];
-  const regex = /(@\w+)|(https?:\/\/\S+\.(?:gif|webp)(?:\?\S*)?)/gi;
+  const regex = /(@\w+)|(https?:\/\/(?:media\d?\.|i\.)?giphy\.com\/\S+)|(https?:\/\/\S+\.(?:gif|webp)(?:\?\S*)?)/gi;
   let last = 0;
   let match: RegExpExecArray | null;
   while ((match = regex.exec(content)) !== null) {
     if (match.index > last) parts.push({ type: 'text', value: content.slice(last, match.index) });
     if (match[1]) parts.push({ type: 'mention', value: match[1] });
-    else if (match[2]) parts.push({ type: 'gif', value: match[2] });
+    else if (match[2] || match[3]) parts.push({ type: 'gif', value: match[2] ?? match[3]! });
     last = match.index + match[0].length;
   }
   if (last < content.length) parts.push({ type: 'text', value: content.slice(last) });
@@ -37,15 +39,4 @@ export function MessageContent({ content }: { content: string }) {
   );
 }
 
-export function AttachmentLink({ fileId, name }: { fileId: string; name: string }) {
-  const download = async () => {
-    const { apiClient } = await import('../../services/api/client');
-    const { data } = await apiClient.get(`/files/${fileId}/download`);
-    if (data.data?.url) window.open(data.data.url, '_blank');
-  };
-  return (
-    <Link component="button" variant="body2" onClick={download} sx={{ display: 'block', mt: 0.5 }}>
-      📎 {name}
-    </Link>
-  );
-}
+export { AttachmentPreview } from './AttachmentPreview';

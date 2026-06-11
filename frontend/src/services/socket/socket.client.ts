@@ -25,5 +25,8 @@ export function connectSocket(): void {
 }
 
 export function disconnectSocket(): void {
-  socket?.disconnect();
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
 }

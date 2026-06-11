@@ -14,6 +14,7 @@ usersRoutes.get('/me', usersController.me);
 usersRoutes.patch('/me', validate({ body: updateProfileSchema }), usersController.updateMe);
 usersRoutes.post('/me/avatar', upload.single('avatar'), usersController.uploadAvatar);
 usersRoutes.get('/directory', usersController.directory);
+usersRoutes.post('/presence/bulk', usersController.bulkPresence);
 usersRoutes.get('/:id', usersController.getById);
 usersRoutes.get('/:id/presence', usersController.presence);
 

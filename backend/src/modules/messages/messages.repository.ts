@@ -5,7 +5,7 @@ export const messagesRepository = {
     return prisma.message.findMany({
       where: {
         conversationId,
-        parentMessageId: null,
+        isDeleted: false,
         ...(before ? { createdAt: { lt: before } } : {}),
       },
       include: {
@@ -19,6 +19,7 @@ export const messagesRepository = {
             id: true,
             content: true,
             sender: { select: { displayName: true } },
+            attachments: { include: { file: { select: { originalName: true, mimeType: true } } } },
           },
         },
       },
