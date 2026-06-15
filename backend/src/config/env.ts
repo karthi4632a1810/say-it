@@ -21,13 +21,15 @@ const envSchema = z.object({
     .string()
     .default('false')
     .transform((v) => v === 'true' || v === '1'),
-  LLM_PROVIDER: z.enum(['ollama', 'openai']).default('ollama'),
+  LLM_PROVIDER: z.enum(['ollama', 'groq', 'openai']).default('ollama'),
   OLLAMA_BASE_URL: z.string().default('http://localhost:11434'),
   OLLAMA_LLM_MODEL: z.string().default('qwen3.5:latest'),
   OLLAMA_LLM_THINK: z
     .string()
     .default('false')
     .transform((v) => v === 'true' || v === '1'),
+  GROQ_API_KEY: z.string().optional(),
+  GROQ_LLM_MODEL: z.string().default('llama-3.3-70b-versatile'),
   EMBEDDING_PROVIDER: z.enum(['ollama', 'openai']).default('ollama'),
   OLLAMA_EMBED_MODEL: z.string().default('nomic-embed-text'),
   EMBEDDING_DIMENSIONS: z.coerce.number().default(768),

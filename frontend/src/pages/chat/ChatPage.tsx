@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { Box, Paper, Typography, Stack, Chip } from '@mui/material';
+import { Box, Paper, Typography, Stack } from '@mui/material';
 import PushPinIcon from '@mui/icons-material/PushPin';
 import { apiClient } from '../../services/api/client';
 import { getSocket } from '../../services/socket/socket.client';
@@ -9,6 +9,7 @@ import type { RootState } from '../../store';
 import type { ChatMessage, ChatUser, Conversation, ReplyTarget } from '../../types/chat';
 import { getConversationTitle } from '../../utils/chat';
 import { MessageItem } from '../../components/chat/MessageItem';
+import { TypingIndicator } from '../../components/chat/TypingIndicator';
 import { MessageInput } from '../../components/chat/MessageInput';
 import { MessageInfoDialog } from '../../components/chat/MessageInfoDialog';
 import { ForwardDialog } from '../../components/chat/ForwardDialog';
@@ -112,13 +113,9 @@ export function ChatPage() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, typingUsers]);
 
   const members: ChatUser[] = conversation?.members?.map((m) => m.user) ?? [];
-
-  const typingLabel = typingUsers
-    .map((uid) => memberMap.current[uid]?.displayName ?? 'Someone')
-    .join(', ');
 
   const saveEdit = async () => {
     if (!editing) return;
@@ -212,9 +209,11 @@ export function ChatPage() {
             onJumpToMessage={jumpToMessage}
           />
         ))}
-        {typingUsers.length > 0 && (
-          <Chip size="small" label={`${typingLabel} ${typingUsers.length > 1 ? 'are' : 'is'} typing...`} sx={{ opacity: 0.7 }} />
-        )}
+        {typingUsers.map((uid) => {
+          const member = memberMap.current[uid];
+          if (!member) return null;
+          return <TypingIndicator key={uid} user={member} />;
+        })}
         <div ref={bottomRef} />
       </Paper>
 
