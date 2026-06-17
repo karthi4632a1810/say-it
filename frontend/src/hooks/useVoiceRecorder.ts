@@ -1,9 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { audioFileExtension, pickAudioMimeType } from '../utils/audioRecord';
+import { micBlockedReason } from '../utils/secureMedia';
+import { getMicrophoneStream } from '../utils/microphone';
+
+export type VoiceRecorderError = 'insecure' | 'denied' | 'unsupported';
 
 export function useVoiceRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [seconds, setSeconds] = useState(0);
+  const [lastError, setLastError] = useState<VoiceRecorderError | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -22,11 +27,18 @@ export function useVoiceRecorder() {
   useEffect(() => () => cleanupStream(), [cleanupStream]);
 
   const start = useCallback(async (): Promise<boolean> => {
+    setLastError(null);
+    const blocked = micBlockedReason();
+    if (blocked) {
+      setLastError('insecure');
+      return false;
+    }
     if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setLastError('unsupported');
       return false;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await getMicrophoneStream();
       streamRef.current = stream;
       const mimeType = pickAudioMimeType();
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
@@ -41,6 +53,7 @@ export function useVoiceRecorder() {
       timerRef.current = setInterval(() => setSeconds((s) => s + 1), 1000);
       return true;
     } catch {
+      setLastError('denied');
       cleanupStream();
       setIsRecording(false);
       setSeconds(0);
@@ -90,5 +103,5 @@ export function useVoiceRecorder() {
     setSeconds(0);
   }, [cleanupStream]);
 
-  return { isRecording, seconds, start, stop, cancel };
+  return { isRecording, seconds, lastError, start, stop, cancel };
 };

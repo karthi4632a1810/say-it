@@ -7,7 +7,7 @@ type UiState = {
 };
 
 const initialState: UiState = {
-  sidebarOpen: true,
+  sidebarOpen: false,
   activeConversationId: null,
   aiSearchOpen: false,
 };
@@ -19,6 +19,12 @@ const uiSlice = createSlice({
     toggleSidebar(state) {
       state.sidebarOpen = !state.sidebarOpen;
     },
+    setSidebarOpen(state, action: PayloadAction<boolean>) {
+      state.sidebarOpen = action.payload;
+    },
+    closeSidebar(state) {
+      state.sidebarOpen = false;
+    },
     setActiveConversation(state, action: PayloadAction<string | null>) {
       state.activeConversationId = action.payload;
     },
@@ -28,5 +34,5 @@ const uiSlice = createSlice({
   },
 });
 
-export const { toggleSidebar, setActiveConversation, setAiSearchOpen } = uiSlice.actions;
+export const { toggleSidebar, setSidebarOpen, closeSidebar, setActiveConversation, setAiSearchOpen } = uiSlice.actions;
 export default uiSlice.reducer;

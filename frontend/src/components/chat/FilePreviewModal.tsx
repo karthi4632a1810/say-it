@@ -7,6 +7,7 @@ import { useFileBlob, downloadFileBlob } from '../../hooks/useFileBlob';
 import { getPreviewKind } from '../../utils/fileTypes';
 import { PdfViewer } from './PdfViewer';
 import { VideoFullscreenPlayer } from './VideoPreviewCard';
+import { SpreadsheetViewer } from './SpreadsheetViewer';
 
 type Props = {
   open: boolean;
@@ -35,7 +36,7 @@ export function FilePreviewModal({ open, onClose, fileId, name, mimeType }: Prop
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers sx={{ minHeight: 240, p: kind === 'pdf' ? 2 : 1, bgcolor: kind === 'image' || kind === 'video' ? 'grey.900' : undefined, flex: 1 }}>
+      <DialogContent dividers sx={{ minHeight: 240, p: kind === 'pdf' || kind === 'spreadsheet' ? 2 : 1, bgcolor: kind === 'image' || kind === 'video' ? 'grey.900' : undefined, flex: 1 }}>
         {loading && (
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
             Loading preview…
@@ -63,6 +64,9 @@ export function FilePreviewModal({ open, onClose, fileId, name, mimeType }: Prop
         )}
         {!loading && !error && blob && kind === 'pdf' && (
           <PdfViewer blob={blob} />
+        )}
+        {!loading && !error && blob && kind === 'spreadsheet' && (
+          <SpreadsheetViewer blob={blob} filename={name} />
         )}
         {!loading && !error && kind === 'other' && (
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>

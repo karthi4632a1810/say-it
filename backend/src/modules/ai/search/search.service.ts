@@ -27,7 +27,7 @@ export const searchService = {
 
     if (chunks.length === 0) {
       const answer = "I don't have information about that in the company's knowledge base.";
-      await prisma.aiSearchHistory.create({ data: { userId, query, answer } });
+      await saveSearchHistory(userId, query, answer);
       return { answer, citations: [] };
     }
 
@@ -57,7 +57,7 @@ export const searchService = {
       }),
     );
 
-    await prisma.aiSearchHistory.create({ data: { userId, query, answer } });
+    await saveSearchHistory(userId, query, answer);
 
     return { answer, citations };
   },
@@ -70,3 +70,11 @@ export const searchService = {
     });
   },
 };
+
+async function saveSearchHistory(userId: string, query: string, answer: string): Promise<void> {
+  try {
+    await prisma.aiSearchHistory.create({ data: { userId, query, answer } });
+  } catch {
+    // History is non-critical; don't fail the search response
+  }
+}

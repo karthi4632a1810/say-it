@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { Box, Paper, Typography, Stack } from '@mui/material';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Box, Paper, Typography, Stack, IconButton, Tooltip } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import PushPinIcon from '@mui/icons-material/PushPin';
+import PhoneIcon from '@mui/icons-material/Phone';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import { apiClient } from '../../services/api/client';
 import { getSocket } from '../../services/socket/socket.client';
 import { useSelector } from 'react-redux';
@@ -16,9 +19,13 @@ import { ForwardDialog } from '../../components/chat/ForwardDialog';
 import { PresenceAvatar } from '../../components/presence/PresenceAvatar';
 import { PresenceLabel } from '../../components/presence/PresenceLabel';
 import { usePresenceHydration } from '../../hooks/usePresenceHydration';
+import { useVoiceCall } from '../../context/CallProvider';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 export function ChatPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const user = useSelector((s: RootState) => s.auth.user);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -35,6 +42,7 @@ export function ChatPage() {
   const memberMap = useRef<Record<string, ChatUser>>({});
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const { initiateCall, status: callStatus } = useVoiceCall();
 
   const jumpToMessage = useCallback((messageId: string) => {
     const el = document.getElementById(`msg-${messageId}`);
@@ -74,6 +82,12 @@ export function ChatPage() {
     return data.data;
   }
 
+  const markConversationRead = useCallback(() => {
+    if (!id) return;
+    getSocket().emit('conversation:read', { conversationId: id });
+    apiClient.post(`/conversations/${id}/read`).catch(() => {});
+  }, [id]);
+
   useEffect(() => {
     if (!id || !user) return;
     setMessages([]);
@@ -82,10 +96,12 @@ export function ChatPage() {
     loadConversation();
     const socket = getSocket();
     socket.emit('channel:join', { conversationId: id });
-    socket.emit('conversation:read', { conversationId: id });
-    apiClient.post(`/conversations/${id}/read`).catch(() => {});
+    markConversationRead();
 
-    const onNew = () => loadMessages();
+    const onNew = () => {
+      loadMessages();
+      markConversationRead();
+    };
     const onUpdated = () => loadMessages();
     const onDeleted = () => loadMessages();
     const onTyping = (data: { conversationId: string; userId: string; isTyping: boolean }) => {
@@ -109,7 +125,7 @@ export function ChatPage() {
       socket.off('typing:update', onTyping);
       socket.off('message:read_receipt', onRead);
     };
-  }, [id, user, loadMessages, loadConversation]);
+  }, [id, user, loadMessages, loadConversation, markConversationRead]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -148,25 +164,60 @@ export function ChatPage() {
         alignItems="center"
         spacing={1}
         sx={{
-          px: 2,
-          py: 1.25,
+          px: isMobile ? 1 : 2,
+          py: isMobile ? 1 : 1.25,
           flexShrink: 0,
           borderBottom: '1px solid',
           borderColor: 'divider',
           bgcolor: 'background.paper',
         }}
       >
+        {isMobile && (
+          <IconButton onClick={() => navigate('/')} aria-label="Back to chats" sx={{ width: 44, height: 44 }}>
+            <ArrowBackIcon />
+          </IconButton>
+        )}
         <PresenceAvatar
           userId={otherUser?.id}
-          sx={{ width: 36, height: 36 }}
+          sx={{ width: isMobile ? 40 : 36, height: isMobile ? 40 : 36 }}
           src={otherUser?.avatarUrl ?? undefined}
         >
           {title[0]}
         </PresenceAvatar>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h6" fontWeight={700} noWrap>{title}</Typography>
+        <Box sx={{ minWidth: 0, flex: 1 }}>
+          <Typography variant={isMobile ? 'subtitle1' : 'h6'} fontWeight={700} noWrap>{title}</Typography>
           {otherUser && <PresenceLabel userId={otherUser.id} display="block" />}
         </Box>
+        {otherUser && (
+          <>
+            <Tooltip title="Voice call">
+              <span>
+                <IconButton
+                  color="primary"
+                  disabled={callStatus !== 'idle'}
+                  onClick={() => void initiateCall(id, otherUser.id, 'voice')}
+                  aria-label="Start voice call"
+                  sx={{ width: 44, height: 44 }}
+                >
+                  <PhoneIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+            <Tooltip title="Video call">
+              <span>
+                <IconButton
+                  color="primary"
+                  disabled={callStatus !== 'idle'}
+                  onClick={() => void initiateCall(id, otherUser.id, 'video')}
+                  aria-label="Start video call"
+                  sx={{ width: 44, height: 44 }}
+                >
+                  <VideocamIcon />
+                </IconButton>
+              </span>
+            </Tooltip>
+          </>
+        )}
       </Stack>
 
       {pinned.length > 0 && (
@@ -183,7 +234,7 @@ export function ChatPage() {
         </Paper>
       )}
 
-      <Paper sx={{ flex: 1, overflow: 'auto', px: 2, pt: 2, pb: 2, bgcolor: 'background.default', borderRadius: 0, minHeight: 0, boxShadow: 'none' }}>
+      <Paper sx={{ flex: 1, overflow: 'auto', px: isMobile ? 1 : 2, pt: 2, pb: 2, bgcolor: 'background.default', borderRadius: 0, minHeight: 0, boxShadow: 'none', WebkitOverflowScrolling: 'touch' }}>
         {loadError && (
           <Typography variant="body2" color="error" sx={{ textAlign: 'center', mt: 2 }}>
             {loadError}
@@ -217,7 +268,7 @@ export function ChatPage() {
         <div ref={bottomRef} />
       </Paper>
 
-      <Box sx={{ width: '100%', flexShrink: 0, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper' }}>
+      <Box sx={{ width: '100%', flexShrink: 0, borderTop: '1px solid', borderColor: 'divider', bgcolor: 'background.paper', pb: isMobile ? 'env(safe-area-inset-bottom, 0px)' : 0 }}>
         <MessageInput
           conversationId={id}
           members={members}

@@ -40,3 +40,4 @@ export function MessageContent({ content }: { content: string }) {
 }
 
 export { AttachmentPreview } from './AttachmentPreview';
+export { AttachmentGroup } from './AttachmentGroup';

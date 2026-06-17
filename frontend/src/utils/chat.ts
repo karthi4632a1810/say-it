@@ -17,7 +17,7 @@ export function getMessagePreviewText(message: {
   if (kind === 'video') return 'Video';
   if (kind === 'image') return 'Photo';
   if (kind === 'audio') return 'Voice message';
-  if (kind === 'pdf') return att.file.originalName;
+  if (kind === 'pdf' || kind === 'spreadsheet') return att.file.originalName;
   return att.file.originalName;
 }
 

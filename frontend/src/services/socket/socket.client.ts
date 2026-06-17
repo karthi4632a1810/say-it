@@ -1,15 +1,15 @@
 import { io, type Socket } from 'socket.io-client';
 import { getAccessToken } from '../api/client';
-
-const SOCKET_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+import { getSocketUrl } from '../../config/apiBase';
 
 let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io(SOCKET_URL, {
+    socket = io(getSocketUrl(), {
       autoConnect: false,
       auth: { token: getAccessToken() },
+      transports: ['websocket', 'polling'],
       reconnectionAttempts: Infinity,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 30000,

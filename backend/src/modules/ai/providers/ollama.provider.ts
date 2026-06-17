@@ -38,14 +38,22 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async embed(text: string): Promise<number[]> {
-    const response = await fetch(`${this.baseUrl}/api/embeddings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: this.embedModel,
-        prompt: text,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/api/embeddings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: this.embedModel,
+          prompt: text,
+        }),
+      });
+    } catch (err) {
+      throw new Error(
+        `Cannot reach Ollama at ${this.baseUrl}. Start Ollama and run: ollama pull ${this.embedModel}`,
+        { cause: err },
+      );
+    }
 
     if (!response.ok) {
       const errText = await response.text();

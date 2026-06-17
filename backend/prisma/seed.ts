@@ -162,6 +162,38 @@ async function main() {
     update: {},
   });
 
+  let directConv = await prisma.conversation.findFirst({
+    where: {
+      type: 'DIRECT',
+      AND: [
+        { members: { some: { userId: admin.id } } },
+        { members: { some: { userId: demo.id } } },
+      ],
+    },
+  });
+  if (!directConv) {
+    directConv = await prisma.conversation.create({
+      data: {
+        type: 'DIRECT',
+        createdBy: admin.id,
+        members: {
+          create: [
+            { userId: admin.id, role: 'MEMBER' },
+            { userId: demo.id, role: 'MEMBER' },
+          ],
+        },
+      },
+    });
+    await prisma.message.create({
+      data: {
+        conversationId: directConv.id,
+        senderId: admin.id,
+        content: 'Hey Demo — tap here to try direct messages!',
+        contentType: 'TEXT',
+      },
+    });
+  }
+
   console.log('Seed complete.');
   console.log('  admin / Admin123!');
   console.log('  demo / Admin123!');

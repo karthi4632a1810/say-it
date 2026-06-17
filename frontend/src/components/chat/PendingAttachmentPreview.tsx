@@ -16,7 +16,9 @@ import { getPreviewKind, formatFileSize, type PreviewKind } from '../../utils/fi
 import { LocalFilePreviewModal } from './LocalFilePreviewModal';
 import { ImageEditModal, type EditTool } from './ImageEditModal';
 import { VideoEditModal } from './VideoEditModal';
+import TableChartOutlinedIcon from '@mui/icons-material/TableChartOutlined';
 import { VideoPreviewCard } from './VideoPreviewCard';
+import { SpreadsheetViewer } from './SpreadsheetViewer';
 
 type Props = {
   name: string;
@@ -38,6 +40,7 @@ function KindBadge({ kind }: { kind: PreviewKind }) {
     video: { label: 'Video', icon: <MovieOutlinedIcon sx={{ fontSize: 12 }} /> },
     audio: { label: 'Voice', icon: <MicIcon sx={{ fontSize: 12 }} /> },
     pdf: { label: 'PDF', icon: <PictureAsPdfIcon sx={{ fontSize: 12 }} /> },
+    spreadsheet: { label: 'Sheet', icon: <TableChartOutlinedIcon sx={{ fontSize: 12 }} /> },
     other: { label: 'File', icon: <InsertDriveFileOutlinedIcon sx={{ fontSize: 12 }} /> },
   };
   const { label, icon } = map[kind];
@@ -136,6 +139,33 @@ function LocalPdfPreview({ url, name }: { url: string; name: string }) {
   );
 }
 
+function LocalSpreadsheetPreview({ url, name }: { url: string; name: string }) {
+  const [blob, setBlob] = useState<Blob | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(url)
+      .then((r) => r.blob())
+      .then((b) => { if (!cancelled) setBlob(b); })
+      .catch(() => { if (!cancelled) setBlob(null); });
+    return () => { cancelled = true; };
+  }, [url]);
+
+  if (!blob) {
+    return (
+      <Box sx={{ height: PREVIEW_H, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'grey.100' }}>
+        <LinearProgress sx={{ width: '60%' }} />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ height: PREVIEW_H, overflow: 'hidden' }}>
+      <SpreadsheetViewer blob={blob} filename={name} compact />
+    </Box>
+  );
+}
+
 function LocalAudioPreview({ url }: { url: string }) {
   return (
     <Box sx={{ height: PREVIEW_H, display: 'flex', alignItems: 'center', justifyContent: 'center', px: 2, bgcolor: 'grey.100' }}>
@@ -149,6 +179,7 @@ function PreviewBody({ kind, url, name }: { kind: PreviewKind; url: string; name
   if (kind === 'video') return <LocalVideoPreview url={url} />;
   if (kind === 'audio') return <LocalAudioPreview url={url} />;
   if (kind === 'pdf') return <LocalPdfPreview url={url} name={name} />;
+  if (kind === 'spreadsheet') return <LocalSpreadsheetPreview url={url} name={name} />;
   return (
     <Box
       sx={{

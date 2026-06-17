@@ -18,8 +18,8 @@ async function main() {
   createSocketServer(httpServer);
   startEmbeddingWorker();
 
-  httpServer.listen(env.PORT, () => {
-    logger.info(`Say IT API running on http://localhost:${env.PORT}`);
+  httpServer.listen(env.PORT, '0.0.0.0', () => {
+    logger.info(`Say IT API listening on port ${env.PORT} (0.0.0.0 — reachable on LAN at http://<your-ip>:${env.PORT})`);
   });
 }
 

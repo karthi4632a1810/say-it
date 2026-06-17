@@ -7,6 +7,7 @@ import { socketAuth } from './socket.middleware.js';
 import { joinUserRooms, registerPresenceHandlers } from './handlers/presence.handler.js';
 import { registerMessageHandlers } from './handlers/message.handler.js';
 import { registerTypingHandlers } from './handlers/typing.handler.js';
+import { registerCallHandlers } from './handlers/call.handler.js';
 
 export function createSocketServer(httpServer: HttpServer): Server {
   const io = new Server(httpServer, {
@@ -24,6 +25,7 @@ export function createSocketServer(httpServer: HttpServer): Server {
     registerPresenceHandlers(io, socket);
     registerMessageHandlers(io, socket);
     registerTypingHandlers(io, socket);
+    registerCallHandlers(io, socket);
   });
 
   return io;

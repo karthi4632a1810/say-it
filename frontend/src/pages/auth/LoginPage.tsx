@@ -30,9 +30,9 @@ export function LoginPage() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default' }}>
-      <Card sx={{ width: 400 }}>
-        <CardContent sx={{ p: 4 }}>
+    <Box sx={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'background.default', p: 2 }}>
+      <Card sx={{ width: '100%', maxWidth: 400 }}>
+        <CardContent sx={{ p: { xs: 3, sm: 4 } }}>
           <Typography variant="h5" fontWeight={700} gutterBottom>Say IT</Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Enterprise communication platform</Typography>
           {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

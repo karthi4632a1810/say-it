@@ -37,6 +37,11 @@ const envSchema = z.object({
   MAX_UPLOAD_BYTES: z.coerce.number().default(20 * 1024 * 1024 * 1024),
   /** HTTP request timeout for large uploads (default 24h). 0 = no timeout. */
   UPLOAD_REQUEST_TIMEOUT_MS: z.coerce.number().default(24 * 60 * 60 * 1000),
+  /** Comma-separated STUN URLs for WebRTC voice calls. */
+  STUN_URLS: z.string().default('stun:stun.l.google.com:19302'),
+  TURN_URL: z.string().optional(),
+  TURN_USERNAME: z.string().optional(),
+  TURN_CREDENTIAL: z.string().optional(),
 });
 
 const parsed = envSchema.parse(process.env);

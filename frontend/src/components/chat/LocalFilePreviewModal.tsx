@@ -7,6 +7,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import { getPreviewKind } from '../../utils/fileTypes';
 import { PdfViewer } from './PdfViewer';
 import { VideoFullscreenPlayer } from './VideoPreviewCard';
+import { SpreadsheetViewer } from './SpreadsheetViewer';
 
 type Props = {
   open: boolean;
@@ -21,7 +22,7 @@ export function LocalFilePreviewModal({ open, onClose, name, mimeType, previewUr
   const [blob, setBlob] = useState<Blob | null>(null);
 
   useEffect(() => {
-    if (!open || kind !== 'pdf') {
+    if (!open || (kind !== 'pdf' && kind !== 'spreadsheet')) {
       setBlob(null);
       return;
     }
@@ -53,7 +54,7 @@ export function LocalFilePreviewModal({ open, onClose, name, mimeType, previewUr
           <CloseIcon />
         </IconButton>
       </DialogTitle>
-      <DialogContent dividers sx={{ p: kind === 'pdf' ? 2 : 1, bgcolor: 'grey.900', display: 'flex', flexDirection: 'column' }}>
+      <DialogContent dividers sx={{ p: kind === 'pdf' || kind === 'spreadsheet' ? 2 : 1, bgcolor: kind === 'image' || kind === 'video' ? 'grey.900' : undefined, display: 'flex', flexDirection: 'column' }}>
         {kind === 'image' && (
           <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0 }}>
             <Box
@@ -77,6 +78,16 @@ export function LocalFilePreviewModal({ open, onClose, name, mimeType, previewUr
         {kind === 'pdf' && !blob && (
           <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
             Loading PDF…
+          </Typography>
+        )}
+        {kind === 'spreadsheet' && blob && (
+          <Box sx={{ flex: 1, overflow: 'hidden', bgcolor: 'background.paper', borderRadius: 1 }}>
+            <SpreadsheetViewer blob={blob} filename={name} />
+          </Box>
+        )}
+        {kind === 'spreadsheet' && !blob && (
+          <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 6 }}>
+            Loading spreadsheet…
           </Typography>
         )}
         {kind === 'other' && (

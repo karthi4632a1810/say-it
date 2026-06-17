@@ -29,8 +29,12 @@ export function AiSearchModal({ open, onClose }: { open: boolean; onClose: () =>
       setAnswer(data.data.answer);
       setCitations(data.data.citations);
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
-      setError(msg ?? 'AI search failed. Is Ollama running with qwen3.5 and nomic-embed-text?');
+      const apiMsg = (err as { response?: { data?: { error?: { message?: string } } } })?.response?.data?.error?.message;
+      const raw = apiMsg ?? (err instanceof Error ? err.message : '');
+      const friendly = raw.toLowerCase().includes('fetch failed')
+        ? 'AI service unreachable. Ensure the backend is running and Ollama is started (ollama pull nomic-embed-text).'
+        : raw || 'AI search failed. Check that Ollama (embeddings) and Groq (answers) are configured in backend/.env';
+      setError(friendly);
     } finally {
       setLoading(false);
     }

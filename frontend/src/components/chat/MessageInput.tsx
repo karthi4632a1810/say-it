@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import {
   Box, TextField, IconButton, Stack, Popover, Paper, Typography,
-  Button, Alert, CircularProgress,
+  Button, Alert, CircularProgress, Menu, MenuItem, ListItemIcon, ListItemText,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import EmojiEmotionsIcon from '@mui/icons-material/EmojiEmotions';
@@ -12,6 +12,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import AddIcon from '@mui/icons-material/Add';
 import type { ReplyTarget, ChatUser } from '../../types/chat';
 import { apiClient } from '../../services/api/client';
 import {
@@ -25,6 +26,10 @@ import { GifPickerDialog } from './GifPickerDialog';
 import type { GiphyGif } from '../../services/giphy/giphy.client';
 import { useVoiceRecorder } from '../../hooks/useVoiceRecorder';
 import { formatRecordTime } from '../../utils/audioRecord';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { micBlockedReason } from '../../utils/secureMedia';
+
+const TOUCH_BTN = { width: 44, height: 44 };
 
 const EMOJIS = [
   '😀', '😃', '😄', '😁', '😂', '🤣', '😊', '😇', '🙂', '😉', '😍', '🥰', '😘', '😎', '🤩', '🥳',
@@ -58,7 +63,9 @@ export function MessageInput({
   const [pendingFiles, setPendingFiles] = useState<PendingAttachment[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [audioSending, setAudioSending] = useState(false);
+  const [moreAnchor, setMoreAnchor] = useState<HTMLElement | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const isMobile = useIsMobile();
   const typingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const uploadGenRef = useRef<Record<string, number>>({});
   const { isRecording, seconds: recordSeconds, start: startRecording, stop: stopRecording, cancel: cancelRecording } = useVoiceRecorder();
@@ -277,7 +284,13 @@ export function MessageInput({
     setUploadError(null);
     const ok = await startRecording();
     if (!ok) {
-      setUploadError('Microphone access denied or not supported in this browser');
+      const blocked = micBlockedReason();
+      if (blocked) setUploadError(blocked);
+      else if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+        setUploadError('Voice recording is not supported in this browser');
+      } else {
+        setUploadError('Microphone permission denied — allow mic access in browser settings');
+      }
     }
   };
 
@@ -288,6 +301,7 @@ export function MessageInput({
   const displayValue = editingId ? editContent : input;
   const sendDisabled = uploadingCount > 0 || audioSending;
   const inputDisabled = sendDisabled || isRecording;
+  const canSend = Boolean(displayValue.trim()) || readyFiles.length > 0;
 
   return (
     <Box sx={{ width: '100%' }}>
@@ -418,19 +432,42 @@ export function MessageInput({
           borderTop: '1px solid',
           borderColor: 'divider',
           borderRadius: 0,
-          px: 1.5,
-          py: 1,
+          px: isMobile ? 0.75 : 1.5,
+          py: isMobile ? 0.75 : 1,
           bgcolor: 'background.paper',
         }}
       >
-      <Stack direction="row" spacing={0.5} alignItems="flex-end">
-        <IconButton onClick={(e) => setEmojiAnchor(e.currentTarget)} disabled={inputDisabled}>
-          <EmojiEmotionsIcon />
-        </IconButton>
-        <IconButton onClick={() => setGifOpen(true)} disabled={inputDisabled}><GifBoxIcon /></IconButton>
-        <IconButton onClick={() => fileRef.current?.click()} disabled={inputDisabled}>
-          <AttachFileIcon />
-        </IconButton>
+      <Stack direction="row" spacing={0.25} alignItems="flex-end">
+        {isMobile ? (
+          <>
+            <IconButton
+              onClick={() => fileRef.current?.click()}
+              disabled={inputDisabled}
+              sx={TOUCH_BTN}
+              aria-label="Attach file"
+            >
+              <AttachFileIcon />
+            </IconButton>
+            <IconButton
+              onClick={(e) => setMoreAnchor(e.currentTarget)}
+              disabled={inputDisabled}
+              sx={TOUCH_BTN}
+              aria-label="More options"
+            >
+              <AddIcon />
+            </IconButton>
+          </>
+        ) : (
+          <>
+            <IconButton onClick={(e) => setEmojiAnchor(e.currentTarget)} disabled={inputDisabled} sx={TOUCH_BTN}>
+              <EmojiEmotionsIcon />
+            </IconButton>
+            <IconButton onClick={() => setGifOpen(true)} disabled={inputDisabled} sx={TOUCH_BTN}><GifBoxIcon /></IconButton>
+            <IconButton onClick={() => fileRef.current?.click()} disabled={inputDisabled} sx={TOUCH_BTN}>
+              <AttachFileIcon />
+            </IconButton>
+          </>
+        )}
         <input
           ref={fileRef}
           type="file"
@@ -440,32 +477,79 @@ export function MessageInput({
         />
         <TextField
           fullWidth
-          size="small"
+          size={isMobile ? 'medium' : 'small'}
           multiline
-          maxRows={4}
-          placeholder={editingId ? 'Edit message...' : 'Type a message... Use @ to mention'}
+          maxRows={isMobile ? 5 : 4}
+          placeholder={editingId ? 'Edit message...' : isMobile ? 'Message' : 'Type a message... Use @ to mention'}
           value={displayValue}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), send())}
           disabled={isRecording}
-        />
-        <IconButton
-          onClick={toggleVoiceRecording}
-          disabled={Boolean(editingId) || audioSending || uploadingCount > 0}
-          title={isRecording ? 'Stop and send voice message' : 'Record voice message'}
           sx={{
-            color: isRecording ? 'error.main' : 'text.secondary',
-            bgcolor: isRecording ? 'error.50' : 'transparent',
-            '&:hover': { bgcolor: isRecording ? 'error.100' : 'action.hover' },
+            '& .MuiOutlinedInput-root': {
+              borderRadius: isMobile ? 3 : 1,
+              fontSize: isMobile ? 16 : undefined,
+            },
           }}
-        >
-          {audioSending ? <CircularProgress size={22} /> : isRecording ? <StopIcon /> : <MicIcon />}
-        </IconButton>
-        <IconButton color="primary" onClick={send} disabled={sendDisabled || isRecording}>
-          {sendDisabled ? <CircularProgress size={22} /> : <SendIcon />}
-        </IconButton>
+        />
+        {isMobile ? (
+          canSend ? (
+            <IconButton
+              onClick={send}
+              color="primary"
+              disabled={sendDisabled || isRecording}
+              sx={TOUCH_BTN}
+              aria-label="Send"
+            >
+              {sendDisabled ? <CircularProgress size={22} /> : <SendIcon />}
+            </IconButton>
+          ) : (
+            <IconButton
+              onClick={toggleVoiceRecording}
+              disabled={Boolean(editingId) || audioSending || uploadingCount > 0}
+              aria-label={isRecording ? 'Stop recording' : 'Voice message'}
+              sx={{
+                ...TOUCH_BTN,
+                color: isRecording ? 'error.main' : 'text.secondary',
+                bgcolor: isRecording ? 'error.50' : 'transparent',
+              }}
+            >
+              {audioSending ? <CircularProgress size={22} /> : isRecording ? <StopIcon /> : <MicIcon />}
+            </IconButton>
+          )
+        ) : (
+          <>
+            <IconButton
+              onClick={toggleVoiceRecording}
+              disabled={Boolean(editingId) || audioSending || uploadingCount > 0}
+              title={isRecording ? 'Stop and send voice message' : 'Record voice message'}
+              sx={{
+                ...TOUCH_BTN,
+                color: isRecording ? 'error.main' : 'text.secondary',
+                bgcolor: isRecording ? 'error.50' : 'transparent',
+                '&:hover': { bgcolor: isRecording ? 'error.100' : 'action.hover' },
+              }}
+            >
+              {audioSending ? <CircularProgress size={22} /> : isRecording ? <StopIcon /> : <MicIcon />}
+            </IconButton>
+            <IconButton color="primary" onClick={send} disabled={sendDisabled || isRecording} sx={TOUCH_BTN}>
+              {sendDisabled ? <CircularProgress size={22} /> : <SendIcon />}
+            </IconButton>
+          </>
+        )}
       </Stack>
       </Paper>
+
+      <Menu anchorEl={moreAnchor} open={Boolean(moreAnchor)} onClose={() => setMoreAnchor(null)}>
+        <MenuItem onClick={(e) => { setMoreAnchor(null); setEmojiAnchor(e.currentTarget); }}>
+          <ListItemIcon><EmojiEmotionsIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>Emoji</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={() => { setMoreAnchor(null); setGifOpen(true); }}>
+          <ListItemIcon><GifBoxIcon fontSize="small" /></ListItemIcon>
+          <ListItemText>GIF</ListItemText>
+        </MenuItem>
+      </Menu>
 
       {mentionUsers.length > 0 && (
         <Paper sx={{ mx: 2, mt: 1, maxHeight: 120, overflow: 'auto' }}>

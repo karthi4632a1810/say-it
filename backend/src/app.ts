@@ -17,6 +17,7 @@ import { meetingsRoutes } from './modules/meetings/meetings.routes.js';
 import { notificationsRoutes } from './modules/notifications/notifications.routes.js';
 import { announcementsRoutes } from './modules/announcements/announcements.routes.js';
 import { aiRoutes } from './modules/ai/ai.routes.js';
+import { callsRoutes } from './modules/calls/calls.routes.js';
 
 export async function createApp() {
   await ensureBucket();
@@ -60,6 +61,7 @@ export async function createApp() {
   app.use('/notifications', notificationsRoutes);
   app.use('/announcements', announcementsRoutes);
   app.use('/ai', aiRoutes);
+  app.use('/calls', callsRoutes);
 
   app.use(errorHandler);
 

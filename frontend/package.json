@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "ssl:setup": "node scripts/setup-ssl.mjs",
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
@@ -22,6 +23,7 @@
     "@say-it/shared": "workspace:*",
     "@tanstack/react-query": "^5.64.2",
     "axios": "^1.7.9",
+    "jszip": "^3.10.1",
     "pdfjs-dist": "^6.0.227",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -30,6 +32,7 @@
     "react-redux": "^9.2.0",
     "react-router-dom": "^6.28.2",
     "socket.io-client": "^4.8.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
@@ -37,6 +40,7 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "^5.7.3",
-    "vite": "^6.0.7"
+    "vite": "^6.0.7",
+    "vite-plugin-mkcert": "^2.1.0"
   }
 }

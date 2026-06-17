@@ -8,8 +8,8 @@ type Info = {
   content: string | null;
   createdAt: string;
   isEdited: boolean;
-  sender: { displayName: string };
-  statuses: Array<{ status: string; readAt?: string | null; user: { displayName: string } }>;
+  sender: { id: string; displayName: string };
+  statuses: Array<{ status: string; readAt?: string | null; user: { id: string; displayName: string } }>;
   edits: Array<{ previousContent: string; editedAt: string }>;
 };
 
@@ -21,7 +21,9 @@ type Props = {
 
 export function MessageInfoDialog({ open, info, onClose }: Props) {
   if (!info) return null;
-  const readers = info.statuses.filter((s) => s.status === 'READ');
+  const readers = (info.statuses ?? []).filter(
+    (s) => s.status === 'READ' && s.user.id !== info.sender.id,
+  );
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">

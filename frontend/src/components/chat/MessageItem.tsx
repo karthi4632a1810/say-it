@@ -12,9 +12,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
+import DownloadIcon from '@mui/icons-material/Download';
 import type { ChatMessage, ReplyTarget } from '../../types/chat';
 import { formatMessageTime, getMessagePreviewText, getReadTick, isStarredByMe } from '../../utils/chat';
-import { MessageContent, AttachmentPreview } from './MessageContent';
+import { getPreviewKind } from '../../utils/fileTypes';
+import { downloadMessageAttachments, attachmentZipLabel } from '../../utils/downloadAttachments';
+import { MessageContent } from './MessageContent';
+import { AttachmentGroup } from './AttachmentGroup';
 import { ReadTicks } from './ReadTicks';
 import { ReplyQuote } from './ReplyQuote';
 import { apiClient } from '../../services/api/client';
@@ -38,6 +42,8 @@ export function MessageItem({
   const [anchor, setAnchor] = useState<null | HTMLElement>(null);
   const starred = isStarredByMe(message);
   const tick = isOwn ? getReadTick(message, currentUserId) : null;
+  const attachments = message.attachments ?? [];
+  const hasAttachments = attachments.length > 0 && !message.isDeleted;
 
   const act = async (fn: () => Promise<unknown>) => {
     setAnchor(null);
@@ -65,8 +71,8 @@ export function MessageItem({
         } : {}),
       }}
     >
-      {!isOwn && <Avatar sx={{ width: 32, height: 32 }}>{message.sender.displayName[0]}</Avatar>}
-      <Box sx={{ maxWidth: '75%', minWidth: 0, position: 'relative' }}>
+      {!isOwn && <Avatar sx={{ width: 32, height: 32, display: { xs: 'none', sm: 'flex' } }}>{message.sender.displayName[0]}</Avatar>}
+      <Box sx={{ maxWidth: { xs: '88%', sm: '75%' }, minWidth: 0, position: 'relative' }}>
         {!isOwn && (
           <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
             {message.sender.displayName}
@@ -83,6 +89,11 @@ export function MessageItem({
             maxWidth: '100%',
             minWidth: 0,
             width: 'fit-content',
+            ...(message.attachments && message.attachments.length > 1
+              ? { minWidth: 292 }
+              : message.attachments?.some((a) => getPreviewKind(a.file.mimeType, a.file.originalName) !== 'audio')
+                ? { minWidth: 292 }
+                : {}),
           }}
         >
           {message.parent && (
@@ -101,9 +112,11 @@ export function MessageItem({
           ) : (
             <>
               {message.content && <MessageContent content={message.content} />}
-              {message.attachments?.map((a) => (
-                <AttachmentPreview key={a.id} fileId={a.file.id} name={a.file.originalName} mimeType={a.file.mimeType} isOwn={isOwn} />
-              ))}
+              {message.attachments && message.attachments.length > 0 && (
+                <Box sx={{ mt: message.content ? 1 : 0, width: '100%' }}>
+                  <AttachmentGroup attachments={message.attachments} isOwn={isOwn} />
+                </Box>
+              )}
             </>
           )}
 
@@ -153,6 +166,14 @@ export function MessageItem({
             <ListItemIcon><ContentCopyIcon fontSize="small" /></ListItemIcon>
             <ListItemText>Copy</ListItemText>
           </MenuItem>
+          {hasAttachments && (
+            <MenuItem onClick={() => act(async () => downloadMessageAttachments(
+              attachments.map((a) => ({ id: a.file.id, originalName: a.file.originalName })),
+            ))}>
+              <ListItemIcon><DownloadIcon fontSize="small" /></ListItemIcon>
+              <ListItemText>{attachmentZipLabel(attachments.length)}</ListItemText>
+            </MenuItem>
+          )}
           <MenuItem onClick={() => act(() => starred ? apiClient.delete(`/messages/${message.id}/star`) : apiClient.post(`/messages/${message.id}/star`))}>
             <ListItemIcon>{starred ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}</ListItemIcon>
             <ListItemText>{starred ? 'Unstar' : 'Star'}</ListItemText>

@@ -9,3 +9,5 @@ coverage/
 .turbo/
 *.tsbuildinfo
 backend/prisma/migrations/**/migration_lock.toml
+frontend/certs/
+frontend/public/dev-root-ca.pem

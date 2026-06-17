@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Typography, Alert, Box,
 } from '@mui/material';
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import type { PDFDocumentProxy } from 'pdfjs-dist';
+import { FilePreviewCard, fileExtBadge } from './FilePreviewCard';
 
 type Props = {
   blob: Blob;
@@ -139,8 +141,8 @@ export function PdfViewer({ blob, onLoaded, onError }: Props) {
   );
 }
 
-/** Small first-page thumbnail for chat bubble. */
-export function PdfThumbnail({ blob, onClick }: { blob: Blob; onClick: () => void }) {
+/** Small first-page thumbnail canvas for document cards. */
+function PdfThumbnailCanvas({ blob }: { blob: Blob }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
   const passwordCallbackRef = useRef<((password: string) => void) | null>(null);
@@ -161,14 +163,13 @@ export function PdfThumbnail({ blob, onClick }: { blob: Blob; onClick: () => voi
           passwordCallbackRef.current = updatePassword;
           setWrongPassword(reason === 2);
           setNeedsPassword(true);
-          // Only re-open after a wrong attempt — never auto-prompt on page load
           if (reason === 2) setPasswordOpen(true);
         };
 
         const pdf = await loadingTask.promise;
         if (cancelled || !canvasRef.current) return;
         const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 0.35 });
+        const viewport = page.getViewport({ scale: 0.45 });
         const canvas = canvasRef.current;
         canvas.height = viewport.height;
         canvas.width = viewport.width;
@@ -188,31 +189,26 @@ export function PdfThumbnail({ blob, onClick }: { blob: Blob; onClick: () => voi
     if (!passwordInput.trim()) return;
     passwordCallbackRef.current?.(passwordInput);
     setPasswordInput('');
-    // Keep dialog open until pdf.js confirms or rejects the password
   };
-
-  const openPasswordPrompt = () => setPasswordOpen(true);
 
   if (needsPassword && !canvasRef.current?.width) {
     return (
       <>
         <Box
-          onClick={openPasswordPrompt}
+          onClick={() => setPasswordOpen(true)}
           sx={{
-            width: 160,
-            height: 100,
-            bgcolor: 'grey.200',
-            borderRadius: 1,
+            height: '100%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            cursor: 'pointer',
             flexDirection: 'column',
             gap: 0.5,
+            bgcolor: '#f5f5f5',
+            cursor: 'pointer',
           }}
         >
           <Typography variant="caption" fontWeight={600}>🔒 PDF</Typography>
-          <Typography variant="caption">Tap to enter password</Typography>
+          <Typography variant="caption" color="text.secondary">Tap to enter password</Typography>
         </Box>
         {passwordOpen && (
           <PasswordDialog
@@ -231,10 +227,16 @@ export function PdfThumbnail({ blob, onClick }: { blob: Blob; onClick: () => voi
   return (
     <>
       <Box
-        onClick={needsPassword ? openPasswordPrompt : onClick}
-        sx={{ cursor: 'pointer', borderRadius: 1, overflow: 'hidden', display: 'inline-block', lineHeight: 0 }}
+        sx={{
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: '#f5f5f5',
+          overflow: 'hidden',
+        }}
       >
-        <canvas ref={canvasRef} style={{ maxWidth: 160, maxHeight: 100, display: 'block' }} />
+        <canvas ref={canvasRef} style={{ maxWidth: '100%', maxHeight: '100%', display: 'block' }} />
       </Box>
       {passwordOpen && (
         <PasswordDialog
@@ -247,6 +249,30 @@ export function PdfThumbnail({ blob, onClick }: { blob: Blob; onClick: () => voi
         />
       )}
     </>
+  );
+}
+
+/** PDF card for chat bubbles — same shell as spreadsheet / other docs. */
+export function PdfPreviewCard({ blob, filename, onClick }: { blob: Blob; filename: string; onClick?: () => void }) {
+  return (
+    <FilePreviewCard
+      filename={filename}
+      accentColor="#d93025"
+      icon={<PictureAsPdfIcon />}
+      badge={fileExtBadge(filename, 'PDF')}
+      onClick={onClick}
+    >
+      <PdfThumbnailCanvas blob={blob} />
+    </FilePreviewCard>
+  );
+}
+
+/** @deprecated Use PdfPreviewCard */
+export function PdfThumbnail({ blob, onClick }: { blob: Blob; onClick: () => void }) {
+  return (
+    <Box onClick={onClick} sx={{ cursor: 'pointer', borderRadius: 1, overflow: 'hidden', display: 'inline-block', lineHeight: 0 }}>
+      <PdfThumbnailCanvas blob={blob} />
+    </Box>
   );
 }
 
